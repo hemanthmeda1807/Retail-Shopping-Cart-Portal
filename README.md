@@ -75,7 +75,7 @@ riser-shopping-cart/
 - 🛒 **Cart drawer** — live subtotal, GST breakdown, grand total, delivery address, place order
 - ➕ **Add-ons modal** — quantity selector, optional paid add-ons, real-time price breakdown
 - 📦 **Order history** — expandable per-order cards, per-item "Add to Cart", Reorder All
-- 👤 **Auth** — Signup, Login, Forgot Password (email link), Reset Password
+- 👤 **Auth** — Google OAuth Integration, standard Email/Password Signup & Login, Forgot Password (email link)
 - 📧 **Email confirmation** on every order (Nodemailer)
 
 ### Admin-Facing
@@ -115,7 +115,7 @@ riser-shopping-cart/
 ### Authentication
 | Sub-feature | Detail |
 |---|---|
-| **Signup / Login** | Email + password; JWT returned on success and stored in Zustand + localStorage |
+| **Signup / Login** | Email + password or **Google OAuth**; JWT returned on success and stored in Zustand + localStorage |
 | **Forgot Password** | User enters email → backend sends a time-limited reset link via SMTP |
 | **Reset Password** | Token from the email link is verified; new password is set |
 | **Auto-redirect** | `ProtectedRoute` and `GuestRoute` HOC components guard routes; admins are redirected if they try to access user-only areas |
@@ -238,6 +238,7 @@ Content-Type: application/json
 |---|---|---|---|
 | `/api/auth/signup` | POST | None | Register new user |
 | `/api/auth/login` | POST | None | Login, returns JWT |
+| `/api/auth/google` | POST | None | Google OAuth login/signup |
 | `/api/auth/forgot-password` | POST | None | Send password-reset email |
 | `/api/auth/reset-password/:token` | POST | None | Reset password with token |
 | `/api/auth/admin/signup` | POST | API Key | Create admin account |
@@ -368,11 +369,13 @@ SMTP_PORT=587
 SMTP_USER=your_email@gmail.com
 SMTP_PASS=your_gmail_app_password
 CLIENT_URL=http://localhost:5173
+GOOGLE_CLIENT_ID=your_google_client_id_here
 ```
 
 **`frontend/.env`**
 ```env
 VITE_API_URL=http://localhost:5000/api
+VITE_GOOGLE_CLIENT_ID=your_google_client_id_here
 ```
 
 ### 3. Seed the database
