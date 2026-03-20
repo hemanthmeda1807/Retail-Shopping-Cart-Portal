@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuthStore } from '../store/authStore';
+import { GoogleLogin } from '@react-oauth/google';
+import toast from 'react-hot-toast';
 import './Auth.css';
 
 export default function SignupPage() {
@@ -11,6 +13,22 @@ export default function SignupPage() {
   const [showPw, setShowPw] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
   const navigate = useNavigate();
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setLoading(true);
+    setError('');
+    try {
+      const { data } = await api.post('/auth/google', { token: credentialResponse.credential });
+      setAuth(data.data.user, data.data.token);
+      toast.success(`Welcome, ${data.data.user.name}! 🍔`);
+      navigate('/');
+    } catch (err) {
+      setError(err.response?.data?.error?.message || 'Google Sign Up failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,6 +66,18 @@ export default function SignupPage() {
               ⚠️ {error}
             </div>
           )}
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError('Google Sign Up Failed')}
+              useOneTap
+            />
+          </div>
+          <div className="auth-divider" style={{ textAlign: 'center', margin: '1rem 0', color: '#888', fontSize: '14px', position: 'relative' }}>
+            <span style={{ background: '#1e1e1e', padding: '0 10px', position: 'relative', zIndex: 1 }}>or sign up with email</span>
+            <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', background: 'rgba(255,255,255,0.1)', zIndex: 0 }}></div>
+          </div>
 
           <form className="auth-form" onSubmit={handleSubmit} id="signup-form">
             <div className="input-group">
@@ -107,8 +137,7 @@ export default function SignupPage() {
             </button>
           </form>
 
-          <div className="auth-divider">or</div>
-          <p className="auth-switch">
+          <p className="auth-switch" style={{ marginTop: '1.5rem' }}>
             Already have an account? <Link to="/login">Sign in</Link>
           </p>
         </div>

@@ -3,8 +3,10 @@ const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const apiKey = require('../middleware/apiKey');
+
 const auth = require('../middleware/auth');
 const { requireRole } = require('../middleware/rbac');
 const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/email');
@@ -90,6 +92,45 @@ router.post(
     }
   }
 );
+
+// POST /api/auth/google
+router.post('/google', async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ success: false, error: { message: 'Token is required' } });
+    }
+    
+    const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    
+    const payload = ticket.getPayload();
+    const { email, name } = payload;
+
+    let user = await User.findOne({ email });
+    if (!user) {
+      const randomPassword = crypto.randomBytes(32).toString('hex');
+      user = await User.create({ name, email, password_hash: randomPassword });
+    }
+
+    const jwtToken = jwt.sign(
+      { id: user._id, role: user.role, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
+    res.json({ success: true, data: { user: user.toSafeObject(), token: jwtToken } });
+  } catch (err) {
+    console.error('Google Auth Error:', err);
+    res.status(401).json({
+      success: false,
+      error: { code: 'INVALID_GOOGLE_TOKEN', message: 'Invalid or expired Google token' },
+    });
+  }
+});
+
 
 // ── Admin-Only Routes ──────────────────────────────────────────
 

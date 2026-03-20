@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
+import { GoogleLogin } from '@react-oauth/google';
 import './Auth.css';
 
 export default function LoginPage() {
@@ -14,6 +15,22 @@ export default function LoginPage() {
   const navigate              = useNavigate();
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setLoading(true);
+    setError('');
+    try {
+      const { data } = await api.post('/auth/google', { token: credentialResponse.credential });
+      login(data.data.user, data.data.token);
+      toast.success(`Welcome back, ${data.data.user.name}! 🍔`);
+      navigate(data.data.user.role === 'admin' ? '/admin' : '/');
+    } catch (err) {
+      setError(err.response?.data?.error?.message || 'Google Login failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,6 +54,18 @@ export default function LoginPage() {
         <p className="auth-subtitle">Sign in to your Riser account</p>
 
         {error && <div className="auth-error">⚠️ {error}</div>}
+
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError('Google Login Failed')}
+            useOneTap
+          />
+        </div>
+        <div className="auth-divider" style={{ textAlign: 'center', margin: '1rem 0', color: '#888', fontSize: '14px', position: 'relative' }}>
+          <span style={{ background: '#1e1e1e', padding: '0 10px', position: 'relative', zIndex: 1 }}>or sign in with email</span>
+          <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', background: 'rgba(255,255,255,0.1)', zIndex: 0 }}></div>
+        </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="input-group">
